@@ -1,0 +1,25 @@
+name: fix11y Accessibility Remediation
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+  checks: write
+
+jobs:
+  remediate:
+    name: Autonomous Accessibility Remediation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run fix11y Action
+        uses: 13Dav-arc/fix11y-action@v1
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          gemini-api-key: ${{ secrets.GEMINI_API_KEY }} # Optional: unlocks AI-assisted image description

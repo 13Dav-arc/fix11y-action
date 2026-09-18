@@ -1,0 +1,43 @@
+name: 'fix11y Accessibility Action'
+description: 'Zero-dependency automated WCAG 2.1/2.2 AA remediation engine for web templates'
+author: 'fix11y'
+
+branding:
+  icon: 'check-circle'
+  color: 'blue'
+
+inputs:
+  github-token:
+    description: 'GitHub token for creating branches, check-runs, and opening Pull Requests'
+    required: true
+    default: ${{ github.token }}
+  gemini-api-key:
+    description: 'Optional Google Gemini API key for AI-assisted image description'
+    required: false
+    default: ''
+  target-directory:
+    description: 'Target directory containing HTML and template files to scan'
+    required: false
+    default: '.'
+  safe-only:
+    description: 'Whether to apply only safe-tier fixes automatically'
+    required: false
+    default: 'false'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: 20
+
+    - name: Run fix11y Remediation
+      shell: bash
+      run: node "${{ github.action_path }}/src/runner.js"
+      env:
+        GITHUB_TOKEN: ${{ inputs.github-token }}
+        GEMINI_API_KEY: ${{ inputs.gemini-api-key }}
+        TARGET_DIRECTORY: ${{ inputs.target-directory }}
+        SAFE_ONLY: ${{ inputs.safe-only }}
+        ACTION_PATH: ${{ github.action_path }}

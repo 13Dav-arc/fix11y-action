@@ -1,0 +1,21 @@
+{
+  "name": "@fix11y/action",
+  "version": "0.1.0",
+  "description": "Zero-dependency GitHub Action for automated accessibility remediation in private repositories",
+  "type": "module",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "scripts": {
+    "test": "node --test tests/*.test.js"
+  },
+  "keywords": [
+    "accessibility",
+    "a11y",
+    "github-action",
+    "wcag",
+    "fix11y"
+  ],
+  "author": "fix11y",
+  "license": "MIT"
+}
