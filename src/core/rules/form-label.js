@@ -12,6 +12,7 @@ import {
   findNodes
 } from '../parser/parser.js';
 import { createInsertAttributePatch } from '../parser/patcher.js';
+import { deriveAccessibleName, isBlocklisted } from './naming.js';
 
 const IGNORED_INPUT_TYPES = new Set(['hidden', 'submit', 'button', 'reset', 'image']);
 
@@ -68,29 +69,40 @@ export class FormLabelRule extends BaseRule {
   /**
    * Generates an accessible label text derived from element attributes.
    * @param {object} node
-   * @returns {string}
+   * @returns {string|null}
    */
   deriveAriaLabel(node) {
+    const derived = deriveAccessibleName(node, { type: 'input' });
+    if (derived && !isBlocklisted(derived, { type: 'input' })) {
+      return derived;
+    }
+
     const placeholder = getAttributeValue(node, 'placeholder');
-    if (placeholder && placeholder.trim()) {
+    if (placeholder && placeholder.trim() && !isBlocklisted(placeholder.trim(), { type: 'input' })) {
       return placeholder.trim();
     }
 
     const name = getAttributeValue(node, 'name');
     if (name && name.trim()) {
-      return name
+      const formatted = name
         .replace(/[_-]+/g, ' ')
         .replace(/([a-z])([A-Z])/g, '$1 $2')
         .replace(/^./, (str) => str.toUpperCase())
         .trim();
+      if (formatted && !isBlocklisted(formatted, { type: 'input' })) {
+        return formatted;
+      }
     }
 
     const type = getAttributeValue(node, 'type');
-    if (type && type !== 'text') {
-      return type.charAt(0).toUpperCase() + type.slice(1);
+    if (type && !['text', 'hidden', 'password'].includes(type)) {
+      const typeLabel = type.charAt(0).toUpperCase() + type.slice(1);
+      if (!isBlocklisted(typeLabel, { type: 'input' })) {
+        return typeLabel;
+      }
     }
 
-    return 'Input Field';
+    return null;
   }
 
   /**
@@ -268,21 +280,26 @@ export class FormLabelRule extends BaseRule {
       } else {
         // No proximity label available: Inject aria-label for direct accessible name
         const ariaLabelText = this.deriveAriaLabel(control);
-        patches.push(
-          createInsertAttributePatch(
-            control,
-            'aria-label',
-            ariaLabelText,
-            '"',
-            `Add aria-label="${ariaLabelText}" to <${control.tagName}>`
-          )
-        );
+        if (ariaLabelText && !isBlocklisted(ariaLabelText, { type: 'input' })) {
+          patches.push(
+            createInsertAttributePatch(
+              control,
+              'aria-label',
+              ariaLabelText,
+              '"',
+              `Add aria-label="${ariaLabelText}" to <${control.tagName}>`
+            )
+          );
+        }
       }
 
       diagnostics.push(
         this.createDiagnostic({
-          message: `<${control.tagName}> is missing an associated <label> or aria-label.`,
+          message: patches.length > 0
+            ? `<${control.tagName}> is missing an associated <label> or aria-label.`
+            : `<${control.tagName}> is missing an associated <label> or aria-label. Generic placeholders were suppressed.`,
           node: control,
+          safety: 'caution',
           patches
         })
       );

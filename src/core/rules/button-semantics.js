@@ -17,6 +17,7 @@ import {
   createInsertAttributePatch,
   createRemoveAttributePatch
 } from '../parser/patcher.js';
+import { deriveAccessibleName, isBlocklisted } from './naming.js';
 
 export class ButtonSemanticsRule extends BaseRule {
   constructor() {
@@ -29,29 +30,6 @@ export class ButtonSemanticsRule extends BaseRule {
       severity: 'error',
       safety: 'caution'
     });
-  }
-
-  /**
-   * Derives an accessible name for empty buttons from class names or IDs.
-   * @param {object} node
-   * @returns {string}
-   */
-  deriveButtonName(node) {
-    const cls = getAttributeValue(node, 'class') || '';
-    const id = getAttributeValue(node, 'id') || '';
-    const combined = `${cls} ${id}`.toLowerCase();
-
-    if (combined.includes('close') || combined.includes('dismiss')) return 'Close';
-    if (combined.includes('search')) return 'Search';
-    if (combined.includes('menu') || combined.includes('hamburger')) return 'Menu';
-    if (combined.includes('next')) return 'Next';
-    if (combined.includes('prev')) return 'Previous';
-    if (combined.includes('delete') || combined.includes('trash') || combined.includes('remove')) return 'Delete';
-    if (combined.includes('edit')) return 'Edit';
-    if (combined.includes('submit')) return 'Submit';
-    if (combined.includes('save')) return 'Save';
-
-    return 'Action';
   }
 
   /**
@@ -112,16 +90,18 @@ export class ButtonSemanticsRule extends BaseRule {
       ).length > 0;
 
       if (!text && !hasAriaLabel && !hasTitle && !nestedImgWithAlt) {
-        const derivedName = this.deriveButtonName(node);
-        patches.push(
-          createInsertAttributePatch(
-            node,
-            'aria-label',
-            derivedName,
-            '"',
-            `Add aria-label="${derivedName}" to empty <button>`
-          )
-        );
+        const derivedName = deriveAccessibleName(node, { type: 'button' });
+        if (derivedName && !isBlocklisted(derivedName, { type: 'button' })) {
+          patches.push(
+            createInsertAttributePatch(
+              node,
+              'aria-label',
+              derivedName,
+              '"',
+              `Add aria-label="${derivedName}" to empty <button>`
+            )
+          );
+        }
       }
 
       diagnostics.push(
@@ -148,23 +128,35 @@ export class ButtonSemanticsRule extends BaseRule {
       ).length > 0;
 
       if (!text && !hasAriaLabel && !hasTitle && !nestedImgWithAlt) {
-        const derivedName = this.deriveButtonName(btn);
-        const patch = createInsertAttributePatch(
-          btn,
-          'aria-label',
-          derivedName,
-          '"',
-          `Add aria-label="${derivedName}" to empty <button>`
-        );
+        const derivedName = deriveAccessibleName(btn, { type: 'button' });
+        if (derivedName && !isBlocklisted(derivedName, { type: 'button' })) {
+          const patch = createInsertAttributePatch(
+            btn,
+            'aria-label',
+            derivedName,
+            '"',
+            `Add aria-label="${derivedName}" to empty <button>`
+          );
 
-        diagnostics.push(
-          this.createDiagnostic({
-            message: '<button> is missing an accessible name (no text, aria-label, or title).',
-            node: btn,
-            safety: 'safe',
-            patches: [patch]
-          })
-        );
+          diagnostics.push(
+            this.createDiagnostic({
+              message: `<button> is missing an accessible name; derived aria-label="${derivedName}".`,
+              node: btn,
+              safety: 'safe',
+              patches: [patch]
+            })
+          );
+        } else {
+          // Blocklisted or unresolvable -> STRICTLY NO AUTO-PATCH, caution diagnostic
+          diagnostics.push(
+            this.createDiagnostic({
+              message: '<button> is missing an accessible name and requires an explicit descriptive aria-label. Generic placeholders were suppressed.',
+              node: btn,
+              safety: 'caution',
+              patches: []
+            })
+          );
+        }
       }
     }
 

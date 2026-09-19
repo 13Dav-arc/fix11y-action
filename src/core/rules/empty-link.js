@@ -12,6 +12,7 @@ import {
   findNodes
 } from '../parser/parser.js';
 import { createInsertAttributePatch } from '../parser/patcher.js';
+import { deriveAccessibleName, isBlocklisted } from './naming.js';
 
 export class EmptyLinkRule extends BaseRule {
   constructor() {
@@ -64,24 +65,29 @@ export class EmptyLinkRule extends BaseRule {
   /**
    * Derives a heuristic label from the link's href or class attributes.
    * @param {object} node
-   * @returns {string}
+   * @returns {string|null}
    */
   deriveLinkName(node) {
+    const derived = deriveAccessibleName(node, { type: 'link' });
+    if (derived && !isBlocklisted(derived, { type: 'link' })) {
+      return derived;
+    }
+
     const href = (getAttributeValue(node, 'href') || '').trim();
 
     if (href.startsWith('mailto:')) {
       const email = href.slice(7).split('?')[0];
-      if (email) return `Email ${email}`;
+      if (email && !isBlocklisted(email, { type: 'link' })) return `Email ${email}`;
     }
 
     if (href.startsWith('tel:')) {
       const phone = href.slice(4);
-      if (phone) return `Call ${phone}`;
+      if (phone && !isBlocklisted(phone, { type: 'link' })) return `Call ${phone}`;
     }
 
-    if (href.startsWith('#')) {
+    if (href.startsWith('#') && href.length > 1) {
       const target = href.slice(1).replace(/[-_]+/g, ' ').trim();
-      if (target) return `Go to ${target}`;
+      if (target && !isBlocklisted(target, { type: 'link' })) return `Go to ${target}`;
     }
 
     try {
@@ -89,7 +95,7 @@ export class EmptyLinkRule extends BaseRule {
       const pathname = url.pathname.replace(/^\/|\/$/g, '');
       if (pathname) {
         const segment = pathname.split('/').pop()?.replace(/[-_.]+/g, ' ').trim();
-        if (segment) {
+        if (segment && !isBlocklisted(segment, { type: 'link' })) {
           return segment.charAt(0).toUpperCase() + segment.slice(1);
         }
       }
@@ -97,7 +103,7 @@ export class EmptyLinkRule extends BaseRule {
       // Fallback below
     }
 
-    return 'Link';
+    return null;
   }
 
   /**
@@ -115,22 +121,34 @@ export class EmptyLinkRule extends BaseRule {
 
       if (!this.hasAccessibleName(link)) {
         const label = this.deriveLinkName(link);
-        const patch = createInsertAttributePatch(
-          link,
-          'aria-label',
-          label,
-          '"',
-          `Add aria-label="${label}" to empty link`
-        );
+        if (label && !isBlocklisted(label, { type: 'link' })) {
+          const patch = createInsertAttributePatch(
+            link,
+            'aria-label',
+            label,
+            '"',
+            `Add aria-label="${label}" to empty link`
+          );
 
-        diagnostics.push(
-          this.createDiagnostic({
-            message: '<a> link has no accessible name or discernible text content.',
-            node: link,
-            safety: 'caution',
-            patches: [patch]
-          })
-        );
+          diagnostics.push(
+            this.createDiagnostic({
+              message: `<a> link has no accessible name; derived aria-label="${label}".`,
+              node: link,
+              safety: 'caution',
+              patches: [patch]
+            })
+          );
+        } else {
+          // Blocklisted or unresolvable -> STRICTLY NO AUTO-PATCH
+          diagnostics.push(
+            this.createDiagnostic({
+              message: '<a> link has no accessible name or discernible text content. Generic placeholders were suppressed.',
+              node: link,
+              safety: 'caution',
+              patches: []
+            })
+          );
+        }
       }
     }
 

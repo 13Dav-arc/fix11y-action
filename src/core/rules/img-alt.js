@@ -4,8 +4,9 @@
  */
 
 import { BaseRule } from './base.js';
-import { getElementsByTagName, hasAttribute, getAttributeValue, getTextContent } from '../parser/parser.js';
+import { getElementsByTagName, hasAttribute, getAttributeValue } from '../parser/parser.js';
 import { createInsertAttributePatch } from '../parser/patcher.js';
+import { classifyImage, deriveAccessibleName, isBlocklisted } from './naming.js';
 
 export class ImgAltRule extends BaseRule {
   constructor() {
@@ -31,29 +32,66 @@ export class ImgAltRule extends BaseRule {
 
     for (const img of images) {
       if (!hasAttribute(img, 'alt')) {
-        let altValue = '';
+        const classification = classifyImage(img);
 
-        // If img has title attribute, use it as contextual alt text
-        const titleVal = getAttributeValue(img, 'title');
-        if (titleVal) {
-          altValue = titleVal;
+        if (classification === 'decorative') {
+          // Branch 1: Explicitly decorative -> inject alt="" with safety: 'safe'
+          const patch = createInsertAttributePatch(
+            img,
+            'alt',
+            '',
+            '"',
+            `Add alt="" to decorative <img src="${getAttributeValue(img, 'src') || ''}">`
+          );
+          diagnostics.push(
+            this.createDiagnostic({
+              message: 'Decorative <img> element is missing an "alt" attribute.',
+              node: img,
+              safety: 'safe',
+              patches: [patch]
+            })
+          );
+        } else if (classification === 'meaningful') {
+          // Branch 2: Meaningful -> derive accessible name
+          const derivedName = deriveAccessibleName(img, { type: 'image' });
+          if (derivedName && !isBlocklisted(derivedName, { type: 'image' })) {
+            const patch = createInsertAttributePatch(
+              img,
+              'alt',
+              derivedName,
+              '"',
+              `Add alt="${derivedName}" to meaningful <img src="${getAttributeValue(img, 'src') || ''}">`
+            );
+            diagnostics.push(
+              this.createDiagnostic({
+                message: `Meaningful <img> element is missing an "alt" attribute; derived alt="${derivedName}".`,
+                node: img,
+                safety: 'caution',
+                patches: [patch]
+              })
+            );
+          } else {
+            // Meaningful, but name undetermined or blocklisted: STRICTLY NO AUTO-PATCH
+            diagnostics.push(
+              this.createDiagnostic({
+                message: 'Meaningful <img> element is missing an "alt" attribute and requires descriptive alt text. Generic placeholders were suppressed.',
+                node: img,
+                safety: 'caution',
+                patches: []
+              })
+            );
+          }
+        } else {
+          // Branch 3: Unknown / no signal either way -> STRICTLY NO AUTO-PATCH, caution diagnostic
+          diagnostics.push(
+            this.createDiagnostic({
+              message: '<img> element has no alt attribute and cannot be deterministically classified as decorative or meaningful. Add descriptive alt text or alt="" if decorative.',
+              node: img,
+              safety: 'caution',
+              patches: []
+            })
+          );
         }
-
-        const patch = createInsertAttributePatch(
-          img,
-          'alt',
-          altValue,
-          '"',
-          `Add alt="${altValue}" to <img src="${getAttributeValue(img, 'src') || ''}">`
-        );
-
-        diagnostics.push(
-          this.createDiagnostic({
-            message: '<img> element is missing an "alt" attribute.',
-            node: img,
-            patches: [patch]
-          })
-        );
       }
     }
 
