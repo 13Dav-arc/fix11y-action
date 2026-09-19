@@ -330,11 +330,18 @@ export function deriveAccessibleName(node, options = {}) {
     }
   }
 
-  // 5. Element class and id vocabulary matching
-  const cls = (getAttributeValue(node, 'class') || '').toLowerCase();
-  const id = (getAttributeValue(node, 'id') || '').toLowerCase();
-  const nameAttr = (getAttributeValue(node, 'name') || '').toLowerCase();
-  const combinedIdent = `${cls} ${id} ${nameAttr}`;
+  // 5. Element class, id, onclick, and data attributes vocabulary matching
+  const cls = getAttributeValue(node, 'class') || '';
+  const id = getAttributeValue(node, 'id') || '';
+  const nameAttr = getAttributeValue(node, 'name') || '';
+  const onclick = getAttributeValue(node, 'onclick') || '';
+  const dataAction = getAttributeValue(node, 'data-action') || '';
+  const ariaControls = getAttributeValue(node, 'aria-controls') || '';
+
+  const rawCombined = `${cls} ${id} ${nameAttr} ${onclick} ${dataAction} ${ariaControls}`
+    .replace(/\{\{.*?\}\}/g, ' ');
+  const humanizedCombined = humanizeIdentifier(rawCombined).toLowerCase();
+  const combinedIdent = `${rawCombined.toLowerCase()} ${humanizedCombined}`;
 
   for (const [key, val] of Object.entries(VOCABULARY_MAP)) {
     const regex = new RegExp(`(?:^|[^a-z0-9])${key}(?:[^a-z0-9]|$)`);
