@@ -91,21 +91,6 @@ export async function runAction(options = {}) {
       let nextViolationToPatch = null;
       for (const diag of diagnostics) {
         if (!diag.patches || diag.patches.length === 0) {
-          // Zero-patch issue: AI-dependent, review-needed, or caution with auto-patch suppressed (e.g. unknown classification)
-          const isAlreadyTracked = unresolvedAiIssues.some(
-            (i) => i.file === relativePath && i.ruleId === diag.ruleId && i.line === (diag.loc?.start?.line || 0)
-          );
-          if (!isAlreadyTracked) {
-            unresolvedAiIssues.push({
-              file: relativePath,
-              ruleId: diag.ruleId,
-              wcag: diag.wcag,
-              safety: diag.safety || 'caution',
-              message: diag.message,
-              line: diag.loc?.start?.line,
-              requiresAi: Boolean(diag.requiresAi || diag.safety === 'review_needed'),
-            });
-          }
           continue;
         }
 
@@ -134,10 +119,27 @@ export async function runAction(options = {}) {
         wcag: nextViolationToPatch.wcag,
         safety: nextViolationToPatch.safety,
         message: nextViolationToPatch.message,
-        line: nextViolationToPatch.loc?.start?.line,
+        line: nextViolationToPatch.loc?.line || nextViolationToPatch.loc?.start?.line || 1,
       });
 
       content = patchedContent;
+    }
+
+    // Final pass on settled content for zero-patch / manual review issues
+    const finalCst = parse(content);
+    const finalDiagnostics = evaluateRules(finalCst, { scope: 'element' });
+    for (const diag of finalDiagnostics) {
+      if (!diag.patches || diag.patches.length === 0) {
+        unresolvedAiIssues.push({
+          file: relativePath,
+          ruleId: diag.ruleId,
+          wcag: diag.wcag,
+          safety: diag.safety || 'caution',
+          message: diag.message,
+          line: diag.loc?.line || diag.loc?.start?.line || 1,
+          requiresAi: Boolean(diag.requiresAi || diag.safety === 'review_needed'),
+        });
+      }
     }
 
     const originalContent = fs.readFileSync(file, 'utf-8');
