@@ -50,7 +50,7 @@ test('fix11y-action - applies safe and caution deterministic patches with scope:
   try {
     // Template with safe (img-alt) and caution (button-semantics) violations
     const html = `<div>
-  <img src="banner.jpg">
+  <img src="divider.png">
   <div onclick="handleClick()">Submit</div>
 </div>`;
 

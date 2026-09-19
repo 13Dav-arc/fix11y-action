@@ -15,6 +15,9 @@ export function generatePrBody({
   const safeCount = appliedPatches.filter(p => p.safety === 'safe').length;
   const cautionCount = appliedPatches.filter(p => p.safety === 'caution').length;
 
+  const aiIssues = unresolvedAiIssues.filter(i => i.requiresAi !== false);
+  const manualIssues = unresolvedAiIssues.filter(i => i.requiresAi === false);
+
   let body = `## ♿ fix11y Automated Accessibility Remediation
 
 > Remediating WCAG 2.1/2.2 AA accessibility violations for commit \`${shortSha}\`.
@@ -29,7 +32,8 @@ export function generatePrBody({
 | **Total Surgical Patches Applied** | **${totalApplied}** |
 | 🟢 **Safe Tier (Autonomous)** | ${safeCount} |
 | 🟡 **Caution Tier (Review Flagged)** | ${cautionCount} |
-| ℹ️ **AI-Dependent Items (Deferred)** | ${unresolvedAiIssues.length} |
+| ⚠️ **Manual Review Items (No Patch)** | ${manualIssues.length} |
+| ℹ️ **AI-Dependent Items (Deferred)** | ${aiIssues.length} |
 
 ---
 
@@ -50,8 +54,25 @@ export function generatePrBody({
     body += '\n';
   }
 
+  // Notice for Manual Review Items (0 auto-patches applied)
+  if (manualIssues.length > 0) {
+    body += `---
+
+### ⚠️ Manual Review Items (No Auto-Patch Applied)
+
+> ⚠️ **The following violation(s) were detected but could not be safely resolved deterministically. Auto-patching was withheld to avoid incorrect edits:**
+
+| File | Line | Rule | WCAG | Safety | Details | Status |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+`;
+    for (const issue of manualIssues) {
+      body += `| \`${issue.file}\` | \`${issue.line || '-'}\` | \`${issue.ruleId}\` | **${issue.wcag || 'WCAG AA'}** | 🟡 \`caution\` | ${issue.message || '-'} | ⚠️ *Manual review required (no auto-patch)* |\n`;
+    }
+    body += '\n';
+  }
+
   // Fallback Notice for AI-dependent items without GEMINI_API_KEY
-  if (unresolvedAiIssues.length > 0) {
+  if (aiIssues.length > 0) {
     body += `---
 
 ### ℹ️ AI-Assisted Remediation Notice
@@ -61,7 +82,7 @@ export function generatePrBody({
 | File | Line | Issue | WCAG | Status |
 | :--- | :--- | :--- | :--- | :--- |
 `;
-    for (const issue of unresolvedAiIssues) {
+    for (const issue of aiIssues) {
       const issueLabel = issue.ruleId ? `\`${issue.ruleId}\` — ${issue.message || ''}` : (issue.message || 'AI-assisted fix required');
       body += `| \`${issue.file}\` | \`${issue.line || '-'}\` | ${issueLabel} | **${issue.wcag || 'WCAG AA'}** | ⏳ *Awaiting human review or Gemini API key* |\n`;
     }

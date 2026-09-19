@@ -91,16 +91,20 @@ export async function runAction(options = {}) {
       let nextViolationToPatch = null;
       for (const diag of diagnostics) {
         if (!diag.patches || diag.patches.length === 0) {
-          if (diag.requiresAi || diag.safety === 'review_needed') {
-            if (!geminiApiKey && !unresolvedAiIssues.some(i => i.file === relativePath && i.ruleId === diag.ruleId)) {
-              unresolvedAiIssues.push({
-                file: relativePath,
-                ruleId: diag.ruleId,
-                wcag: diag.wcag,
-                message: diag.message,
-                line: diag.loc?.start?.line,
-              });
-            }
+          // Zero-patch issue: AI-dependent, review-needed, or caution with auto-patch suppressed (e.g. unknown classification)
+          const isAlreadyTracked = unresolvedAiIssues.some(
+            (i) => i.file === relativePath && i.ruleId === diag.ruleId && i.line === (diag.loc?.start?.line || 0)
+          );
+          if (!isAlreadyTracked) {
+            unresolvedAiIssues.push({
+              file: relativePath,
+              ruleId: diag.ruleId,
+              wcag: diag.wcag,
+              safety: diag.safety || 'caution',
+              message: diag.message,
+              line: diag.loc?.start?.line,
+              requiresAi: Boolean(diag.requiresAi || diag.safety === 'review_needed'),
+            });
           }
           continue;
         }
