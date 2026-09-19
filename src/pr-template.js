@@ -98,6 +98,7 @@ export function generatePrBody({
   }
 
   if (diffSummary) {
+    const cleanDiff = diffSummary.replace(/\x1b\[[0-9;]*m/g, '');
     body += `---
 
 ### 🔍 Unified Patch Diffs
@@ -106,7 +107,7 @@ export function generatePrBody({
 <summary>Click to view surgical code changes</summary>
 
 \`\`\`diff
-${diffSummary}
+${cleanDiff}
 \`\`\`
 
 </details>

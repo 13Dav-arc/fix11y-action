@@ -211,12 +211,21 @@ export function buildHunks(edits, context = 3) {
  * @returns {string} Formatted unified diff string
  */
 export function createUnifiedDiff(oldStr, newStr, options = {}) {
-  const {
-    fromFile = 'a/file',
-    toFile = 'b/file',
-    context = 3,
-    color = true
-  } = options;
+  let fromFile = 'a/file';
+  let toFile = 'b/file';
+  let context = 3;
+  let color = true;
+
+  if (typeof options === 'string') {
+    fromFile = options;
+    if (arguments.length > 3 && typeof arguments[3] === 'string') toFile = arguments[3];
+    if (arguments.length > 4 && typeof arguments[4] === 'boolean') color = arguments[4];
+  } else if (options && typeof options === 'object') {
+    if (options.fromFile) fromFile = options.fromFile;
+    if (options.toFile) toFile = options.toFile;
+    if (typeof options.context === 'number') context = options.context;
+    if (typeof options.color === 'boolean') color = options.color;
+  }
 
   if (oldStr === newStr) return '';
 
