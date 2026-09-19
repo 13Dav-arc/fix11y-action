@@ -1,7 +1,15 @@
 /**
- * PR Template Generator for fix11y-action.
- * Generates an accessible, structured Markdown report with safety badges and AI fallback callouts.
+ * Sanitizes markdown table cell content by wrapping unescaped HTML tag names
+ * (e.g. <img>, <div>, <button type="button">, <input>, <label>) in code backticks
+ * so GitHub Flavored Markdown renders them legibly rather than stripping or swallowing them.
+ * Also escapes pipe characters to prevent breaking table syntax.
  */
+export function formatCellText(text) {
+  if (!text) return '-';
+  return text
+    .replace(/(?<!`)(<[a-zA-Z0-9_-]+(?: [^>]+)?>)(?!`)/g, '`$1`')
+    .replace(/\|/g, '\\|');
+}
 
 export function generatePrBody({
   commitSha = 'head',
@@ -49,7 +57,7 @@ export function generatePrBody({
 `;
     for (const patch of appliedPatches) {
       const safetyBadge = patch.safety === 'safe' ? '🟢 `safe`' : '🟡 `caution`';
-      body += `| \`${patch.file}\` | \`${patch.line || '-'}\` | \`${patch.ruleId}\` | **${patch.wcag || 'WCAG AA'}** | ${safetyBadge} | ${patch.message || '-'} |\n`;
+      body += `| \`${patch.file}\` | \`${patch.line || '-'}\` | \`${patch.ruleId}\` | **${patch.wcag || 'WCAG AA'}** | ${safetyBadge} | ${formatCellText(patch.message)} |\n`;
     }
     body += '\n';
   }
@@ -66,7 +74,7 @@ export function generatePrBody({
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 `;
     for (const issue of manualIssues) {
-      body += `| \`${issue.file}\` | \`${issue.line || '-'}\` | \`${issue.ruleId}\` | **${issue.wcag || 'WCAG AA'}** | 🟡 \`caution\` | ${issue.message || '-'} | ⚠️ *Manual review required (no auto-patch)* |\n`;
+      body += `| \`${issue.file}\` | \`${issue.line || '-'}\` | \`${issue.ruleId}\` | **${issue.wcag || 'WCAG AA'}** | 🟡 \`caution\` | ${formatCellText(issue.message)} | ⚠️ *Manual review required (no auto-patch)* |\n`;
     }
     body += '\n';
   }
@@ -84,7 +92,7 @@ export function generatePrBody({
 `;
     for (const issue of aiIssues) {
       const issueLabel = issue.ruleId ? `\`${issue.ruleId}\` — ${issue.message || ''}` : (issue.message || 'AI-assisted fix required');
-      body += `| \`${issue.file}\` | \`${issue.line || '-'}\` | ${issueLabel} | **${issue.wcag || 'WCAG AA'}** | ⏳ *Awaiting human review or Gemini API key* |\n`;
+      body += `| \`${issue.file}\` | \`${issue.line || '-'}\` | ${formatCellText(issueLabel)} | **${issue.wcag || 'WCAG AA'}** | ⏳ *Awaiting human review or Gemini API key* |\n`;
     }
     body += '\n> *To enable autonomous generation for these issues, configure the `GEMINI_API_KEY` repository secret.*\n\n';
   }

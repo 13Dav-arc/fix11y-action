@@ -45,7 +45,7 @@ export class ImgAltRule extends BaseRule {
           );
           diagnostics.push(
             this.createDiagnostic({
-              message: 'Decorative <img> element is missing an "alt" attribute.',
+              message: 'Decorative `<img>` element is missing an "alt" attribute.',
               node: img,
               safety: 'safe',
               patches: [patch]
@@ -64,7 +64,7 @@ export class ImgAltRule extends BaseRule {
             );
             diagnostics.push(
               this.createDiagnostic({
-                message: `Meaningful <img> element is missing an "alt" attribute; derived alt="${derivedName}".`,
+                message: `Meaningful \`<img>\` element is missing an "alt" attribute; derived alt="${derivedName}".`,
                 node: img,
                 safety: 'caution',
                 patches: [patch]
@@ -74,7 +74,7 @@ export class ImgAltRule extends BaseRule {
             // Meaningful, but name undetermined or blocklisted: STRICTLY NO AUTO-PATCH
             diagnostics.push(
               this.createDiagnostic({
-                message: 'Meaningful <img> element is missing an "alt" attribute and requires descriptive alt text. Generic placeholders were suppressed.',
+                message: 'Meaningful `<img>` element is missing an "alt" attribute and requires descriptive alt text. Generic placeholders were suppressed.',
                 node: img,
                 safety: 'caution',
                 patches: []
@@ -85,7 +85,7 @@ export class ImgAltRule extends BaseRule {
           // Branch 3: Unknown / no signal either way -> STRICTLY NO AUTO-PATCH, caution diagnostic
           diagnostics.push(
             this.createDiagnostic({
-              message: '<img> element has no alt attribute and cannot be deterministically classified as decorative or meaningful. Add descriptive alt text or alt="" if decorative.',
+              message: '`<img>` element has no alt attribute and cannot be deterministically classified as decorative or meaningful. Add descriptive alt text or alt="" if decorative.',
               node: img,
               safety: 'caution',
               patches: []

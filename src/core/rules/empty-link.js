@@ -132,7 +132,7 @@ export class EmptyLinkRule extends BaseRule {
 
           diagnostics.push(
             this.createDiagnostic({
-              message: `<a> link has no accessible name; derived aria-label="${label}".`,
+              message: `\`<a>\` link has no accessible name; derived aria-label="${label}".`,
               node: link,
               safety: 'caution',
               patches: [patch]
@@ -142,7 +142,7 @@ export class EmptyLinkRule extends BaseRule {
           // Blocklisted or unresolvable -> STRICTLY NO AUTO-PATCH
           diagnostics.push(
             this.createDiagnostic({
-              message: '<a> link has no accessible name or discernible text content. Generic placeholders were suppressed.',
+              message: '`<a>` link has no accessible name or discernible text content. Generic placeholders were suppressed.',
               node: link,
               safety: 'caution',
               patches: []

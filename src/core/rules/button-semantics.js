@@ -106,7 +106,7 @@ export class ButtonSemanticsRule extends BaseRule {
 
       diagnostics.push(
         this.createDiagnostic({
-          message: `Non-semantic <${node.tagName}> has click handler or role="button". Convert to <button type="button">.`,
+          message: `Non-semantic \`<${node.tagName}>\` has click handler or role="button". Convert to \`<button type="button">\`.`,
           node,
           safety: 'caution',
           patches
@@ -140,7 +140,7 @@ export class ButtonSemanticsRule extends BaseRule {
 
           diagnostics.push(
             this.createDiagnostic({
-              message: `<button> is missing an accessible name; derived aria-label="${derivedName}".`,
+              message: `\`<button>\` is missing an accessible name; derived aria-label="${derivedName}".`,
               node: btn,
               safety: 'safe',
               patches: [patch]
@@ -150,7 +150,7 @@ export class ButtonSemanticsRule extends BaseRule {
           // Blocklisted or unresolvable -> STRICTLY NO AUTO-PATCH, caution diagnostic
           diagnostics.push(
             this.createDiagnostic({
-              message: '<button> is missing an accessible name and requires an explicit descriptive aria-label. Generic placeholders were suppressed.',
+              message: '`<button>` is missing an accessible name and requires an explicit descriptive aria-label. Generic placeholders were suppressed.',
               node: btn,
               safety: 'caution',
               patches: []

@@ -296,8 +296,8 @@ export class FormLabelRule extends BaseRule {
       diagnostics.push(
         this.createDiagnostic({
           message: patches.length > 0
-            ? `<${control.tagName}> is missing an associated <label> or aria-label.`
-            : `<${control.tagName}> is missing an associated <label> or aria-label. Generic placeholders were suppressed.`,
+            ? `\`<${control.tagName}>\` is missing an associated \`<label>\` or aria-label.`
+            : `\`<${control.tagName}>\` is missing an associated \`<label>\` or aria-label. Generic placeholders were suppressed.`,
           node: control,
           safety: 'caution',
           patches
